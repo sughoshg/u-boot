@@ -237,6 +237,16 @@ static void *get_config_table(const efi_guid_t *guid)
 	return NULL;
 }
 
+static void event_notify_dt_fixup(void *fdt)
+{
+	int ret;
+	struct event_ft_fixup fixup = {0};
+
+	fixup.tree.fdt = fdt;
+	ret = event_notify(EVT_FT_FIXUP, &fixup, sizeof(fixup));
+	if (ret)
+		printf("Error: %d: FDT Fixup event failed\n", ret);
+}
 #endif /* !CONFIG_IS_ENABLED(GENERATE_ACPI_TABLE) */
 
 /**
@@ -318,6 +328,9 @@ efi_status_t efi_install_fdt(void *fdt)
 	efi_carve_out_dt_rsv(fdt);
 
 	efi_try_purge_kaslr_seed(fdt);
+
+	if (!CONFIG_IS_ENABLED(GENERATE_ACPI_TABLE))
+		event_notify_dt_fixup(fdt);
 
 	if (CONFIG_IS_ENABLED(EFI_TCG2_PROTOCOL_MEASURE_DTB)) {
 		ret = efi_tcg2_measure_dtb(fdt);

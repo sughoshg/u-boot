@@ -74,6 +74,79 @@ void efi_try_purge_kaslr_seed(void *fdt)
 }
 
 /**
+ * dt_nodes_props_purge() - Remove non-upstreamed nodes and properties
+ *			    from the DT
+ * @ctx: Context for event
+ * @event: Event to process
+ *
+ * Iterate through an array of DT nodes and properties, and remove them
+ * from the device-tree before the DT gets handed over to the kernel.
+ * These are nodes and properties which do not have upstream bindings
+ * and need to be purged before being handed over to the kernel.
+ *
+ * If both the node and property are specified, delete the property. If
+ * only the node is specified, delete the entire node, including it's
+ * subnodes, if any.
+ *
+ * Return: 0 if OK, -ve on error
+ */
+static int dt_non_compliant_purge(void *ctx, struct event *event)
+{
+	int i;
+	int nodeoff = 0;
+	int err = 0;
+	void *fdt;
+	const struct event_ft_fixup *fixup = &event->data.ft_fixup;
+	struct dt_node_prop_remove {
+		const char *node_path;
+		const char *prop;
+	} list[] = {
+		{
+			.node_path = "/signature",
+			.prop = "capsule-key",
+		},
+		{
+			.node_path = "/fwu-mdata",
+		},
+		{
+		},
+	};
+
+	if (fixup->images)
+		return 0;
+
+	fdt = fixup->tree.fdt;
+	for (i = 0; list[i].node_path; i++) {
+		nodeoff = fdt_path_offset(fdt, list[i].node_path);
+		if (nodeoff < 0) {
+			log_debug("Error (%d) getting node offset for %s\n",
+				  nodeoff, list[i].node_path);
+			continue;
+		}
+
+		if (list[i].prop) {
+			err = fdt_delprop(fdt, nodeoff, list[i].prop);
+			if (err < 0 && err != -FDT_ERR_NOTFOUND) {
+				log_debug("Error (%d) deleting %s\n",
+					  err, list[i].prop);
+				goto out;
+			}
+		} else {
+			err = fdt_del_node(fdt, nodeoff);
+			if (err) {
+				log_debug("Error (%d) trying to delete node %s\n",
+					  err, list[i].node_path);
+				goto out;
+			}
+		}
+	}
+
+out:
+	return err;
+}
+EVENT_SPY(EVT_FT_FIXUP, dt_non_compliant_purge);
+
+/**
  * efi_carve_out_dt_rsv() - Carve out DT reserved memory ranges
  *
  * The mem_rsv entries of the FDT are added to the memory map. Any failures are
