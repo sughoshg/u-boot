@@ -57,3 +57,14 @@ struct phandle_2_arg {
 #endif
 
 #endif
+
+struct dt_non_compliant_purge {
+	const char *node_path;
+	const char *prop;
+};
+
+#define DT_NON_COMPLIANT_PURGE(__name)	\
+	ll_entry_declare(struct dt_non_compliant_purge, __name, dt_purge)
+
+#define DT_NON_COMPLIANT_PURGE_LIST(__name)	\
+	ll_entry_declare_list(struct dt_non_compliant_purge, __name, dt_purge)
