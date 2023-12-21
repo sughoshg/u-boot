@@ -26,30 +26,47 @@ struct fwu_mtd_image_info {
 	char uuidbuf[UUID_STR_LEN + 1];
 };
 
+struct fwu_mdata_mtd_priv {
+	struct mtd_info *mtd;
+	char pri_label[50];
+	char sec_label[50];
+	u32 pri_offset;
+	u32 sec_offset;
+	struct fwu_mtd_image_info *fwu_mtd_images;
+};
+
 struct fwu_mdata_ops {
 	/**
 	 * read_mdata() - Populate the asked FWU metadata copy
 	 * @dev: FWU metadata device
 	 * @mdata: Output FWU mdata read
 	 * @primary: If primary or secondary copy of metadata is to be read
+	 * @size: Size in bytes of the metadata to be read
 	 *
 	 * Return: 0 if OK, -ve on error
 	 */
-	int (*read_mdata)(struct udevice *dev, struct fwu_mdata *mdata, bool primary);
+	int (*read_mdata)(struct udevice *dev, struct fwu_mdata *mdata,
+			  bool primary, uint32_t size);
 
 	/**
 	 * write_mdata() - Write the given FWU metadata copy
 	 * @dev: FWU metadata device
 	 * @mdata: Copy of the FWU metadata to write
 	 * @primary: If primary or secondary copy of metadata is to be written
+	 * @size: Size in bytes of the metadata to be written
 	 *
 	 * Return: 0 if OK, -ve on error
 	 */
-	int (*write_mdata)(struct udevice *dev, struct fwu_mdata *mdata, bool primary);
+	int (*write_mdata)(struct udevice *dev, struct fwu_mdata *mdata,
+			   bool primary, uint32_t size);
 };
 
-#define FWU_MDATA_VERSION	0x1
+#define FWU_MDATA_VERSION	0x2
 #define FWU_IMAGE_ACCEPTED	0x1
+
+#define FWU_BANK_INVALID	0xFF
+#define FWU_BANK_VALID		0xFE
+#define FWU_BANK_ACCEPTED	0xFC
 
 /*
 * GUID value defined in the FWU specification for identification
@@ -80,12 +97,14 @@ struct fwu_mdata_ops {
 /**
  * fwu_read_mdata() - Wrapper around fwu_mdata_ops.read_mdata()
  */
-int fwu_read_mdata(struct udevice *dev, struct fwu_mdata *mdata, bool primary);
+int fwu_read_mdata(struct udevice *dev, struct fwu_mdata *mdata,
+		   bool primary, uint32_t size);
 
 /**
  * fwu_write_mdata() - Wrapper around fwu_mdata_ops.write_mdata()
  */
-int fwu_write_mdata(struct udevice *dev, struct fwu_mdata *mdata, bool primary);
+int fwu_write_mdata(struct udevice *dev, struct fwu_mdata *mdata,
+		    bool primary, uint32_t size);
 
 /**
  * fwu_get_mdata() - Read, verify and return the FWU metadata
@@ -97,6 +116,16 @@ int fwu_write_mdata(struct udevice *dev, struct fwu_mdata *mdata, bool primary);
  * Return: 0 if OK, -ve on error
  */
 int fwu_get_mdata(struct fwu_mdata *mdata);
+
+/**
+ * fwu_get_mdata_size() - Get the FWU metadata size
+ *
+ * Get the size of the FWU metadata from the structure. This is later used
+ * to allocate memory for the structure.
+ *
+ * Return: 0 if OK, -ve on error
+ */
+int fwu_get_mdata_size(uint32_t *mdata_size);
 
 /**
  * fwu_get_active_index() - Get active_index from the FWU metadata
@@ -149,6 +178,18 @@ int fwu_get_image_index(u8 *image_index);
  *
  */
 int fwu_revert_boot_index(void);
+
+/**
+ * fwu_bank_state_update() - Check and update the bank_state of the metadata
+ * @update_index: Bank for which the bank_state needs to be updated
+ *
+ * Check that all the images for the given bank have been accepted, and if
+ * they are, set the status of the bank to Accepted in the bank_state field
+ * of the metadata.
+ *
+ * Return: 0 if OK, -ve on error
+ */
+int fwu_bank_state_update(uint update_index);
 
 /**
  * fwu_accept_image() - Set the Acceptance bit for the image
@@ -249,15 +290,19 @@ u8 fwu_update_checks_pass(void);
 u8 fwu_empty_capsule_checks_pass(void);
 
 /**
- * fwu_trial_state_ctr_start() - Start the Trial State counter
+ * fwu_trial_state_start() - Put the platform in Trial State
+ * @update_index: Bank number to which images have been updated
  *
- * Start the counter to identify the platform booting in the
- * Trial State. The counter is implemented as an EFI variable.
+ * Put the platform in Trial State by starting the counter to
+ * identify the platform booting in the Trial State. The
+ * counter is implemented as an EFI variable. Secondly, set
+ * the bank_state in the metadata for the updated bank to Valid
+ * state.
  *
  * Return: 0 if OK, -ve on error
  *
  */
-int fwu_trial_state_ctr_start(void);
+int fwu_trial_state_start(uint update_index);
 
 /**
  * fwu_gen_alt_info_from_mtd() - Parse dfu_alt_info from metadata in mtd
@@ -282,5 +327,26 @@ int fwu_gen_alt_info_from_mtd(char *buf, size_t len, struct mtd_info *mtd);
  * Return: 0 if OK, -ve on error
  */
 int fwu_mtd_get_alt_num(efi_guid_t *image_guid, u8 *alt_num, const char *mtd_dev);
+
+/**
+ * fwu_get_banks_images() - Get the number of banks and images from the metadata
+ * @nbanks: Number of banks
+ * @nimages: Number of images per bank
+ *
+ * Get the values of number of banks and number of images per bank from the
+ * metadata.
+ *
+ * Return: 0 if OK, -ve on error
+ */
+__maybe_unused int fwu_get_banks_images(u8 *nbanks, u16 *nimages);
+
+/**
+ * fwu_get_dev() - Return the FWU metadata device
+ *
+ * Return the pointer to the FWU metadata device.
+ *
+ * Return: Pointer to the FWU metadata dev
+ */
+__maybe_unused struct udevice *fwu_get_dev(void);
 
 #endif /* _FWU_H_ */
