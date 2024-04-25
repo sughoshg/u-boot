@@ -252,7 +252,10 @@ HOSTLDLIBS_mkeficapsule += \
 	$(shell pkg-config --libs gnutls 2> /dev/null || echo "-lgnutls")
 HOSTLDLIBS_mkeficapsule += \
 	$(shell pkg-config --libs uuid 2> /dev/null || echo "-luuid")
+HOSTLDLIBS_mkeficapsule += \
+	$(shell pkg-config --libs yaml 2> /dev/null || echo "-lyaml")
 hostprogs-$(CONFIG_TOOLS_MKEFICAPSULE) += mkeficapsule
+mkeficapsule-objs := mkeficapsule.o mkeficapsule_parse.o
 
 mkfwumdata-objs := mkfwumdata.o generated/lib/crc32.o
 HOSTLDLIBS_mkfwumdata += -luuid
