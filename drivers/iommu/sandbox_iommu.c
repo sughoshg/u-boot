@@ -5,10 +5,10 @@
 
 #include <dm.h>
 #include <iommu.h>
-#include <lmb.h>
 #include <asm/io.h>
 #include <linux/sizes.h>
 
+#define DVA_ADDR		0x89abc000
 #define IOMMU_PAGE_SIZE		SZ_4K
 
 static dma_addr_t sandbox_iommu_map(struct udevice *dev, void *addr,
@@ -20,8 +20,7 @@ static dma_addr_t sandbox_iommu_map(struct udevice *dev, void *addr,
 	paddr = ALIGN_DOWN(virt_to_phys(addr), IOMMU_PAGE_SIZE);
 	off = virt_to_phys(addr) - paddr;
 	psize = ALIGN(size + off, IOMMU_PAGE_SIZE);
-
-	dva = lmb_alloc(psize, IOMMU_PAGE_SIZE);
+	dva = (phys_addr_t)DVA_ADDR;
 
 	return dva + off;
 }
@@ -35,21 +34,12 @@ static void sandbox_iommu_unmap(struct udevice *dev, dma_addr_t addr,
 	dva = ALIGN_DOWN(addr, IOMMU_PAGE_SIZE);
 	psize = size + (addr - dva);
 	psize = ALIGN(psize, IOMMU_PAGE_SIZE);
-
-	lmb_free(dva, psize);
 }
 
 static struct iommu_ops sandbox_iommu_ops = {
 	.map = sandbox_iommu_map,
 	.unmap = sandbox_iommu_unmap,
 };
-
-static int sandbox_iommu_probe(struct udevice *dev)
-{
-	lmb_add(0x89abc000, SZ_16K);
-
-	return 0;
-}
 
 static const struct udevice_id sandbox_iommu_ids[] = {
 	{ .compatible = "sandbox,iommu" },
@@ -61,5 +51,4 @@ U_BOOT_DRIVER(sandbox_iommu) = {
 	.id = UCLASS_IOMMU,
 	.of_match = sandbox_iommu_ids,
 	.ops = &sandbox_iommu_ops,
-	.probe = sandbox_iommu_probe,
 };
