@@ -8,13 +8,14 @@
 #include <log.h>
 #include <malloc.h>
 #include <dm/test.h>
-#include <test/lib.h>
+#include <test/suites.h>
 #include <test/test.h>
 #include <test/ut.h>
 
-extern struct lmb lmb;
 
-static inline bool lmb_is_nomap(struct lmb_property *m)
+#define LMB_TEST(_name, _flags)	UNIT_TEST(_name, _flags, lmb_test)
+
+static inline bool lmb_is_nomap(struct lmb_region *m)
 {
 	return m->flags & LMB_NOMAP;
 }
@@ -192,7 +193,7 @@ static int test_multi_alloc_512mb_x2(struct unit_test_state *uts,
 }
 
 /* Create a memory region with one reserved region and allocate */
-static int lib_test_lmb_simple_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_simple_norun(struct unit_test_state *uts)
 {
 	int ret;
 
@@ -204,10 +205,10 @@ static int lib_test_lmb_simple_norun(struct unit_test_state *uts)
 	/* simulate 512 MiB RAM beginning at 1.5GiB */
 	return test_multi_alloc_512mb(uts, 0xE0000000);
 }
-LIB_TEST(lib_test_lmb_simple_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_simple_norun, UT_TESTF_MANUAL);
 
 /* Create two memory regions with one reserved region and allocate */
-static int lib_test_lmb_simple_x2_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_simple_x2_norun(struct unit_test_state *uts)
 {
 	int ret;
 
@@ -219,7 +220,7 @@ static int lib_test_lmb_simple_x2_norun(struct unit_test_state *uts)
 	/* simulate 512 MiB RAM beginning at 3.5GiB and 1 GiB */
 	return test_multi_alloc_512mb_x2(uts, 0xE0000000, 0x40000000);
 }
-LIB_TEST(lib_test_lmb_simple_x2_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_simple_x2_norun, UT_TESTF_MANUAL);
 
 /* Simulate 512 MiB RAM, allocate some blocks that fit/don't fit */
 static int test_bigblock(struct unit_test_state *uts, const phys_addr_t ram)
@@ -270,7 +271,7 @@ static int test_bigblock(struct unit_test_state *uts, const phys_addr_t ram)
 	return 0;
 }
 
-static int lib_test_lmb_big_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_big_norun(struct unit_test_state *uts)
 {
 	int ret;
 
@@ -282,7 +283,7 @@ static int lib_test_lmb_big_norun(struct unit_test_state *uts)
 	/* simulate 512 MiB RAM beginning at 1.5GiB */
 	return test_bigblock(uts, 0xE0000000);
 }
-LIB_TEST(lib_test_lmb_big_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_big_norun, UT_TESTF_MANUAL);
 
 /* Simulate 512 MiB RAM, allocate a block without previous reservation */
 static int test_noreserved(struct unit_test_state *uts, const phys_addr_t ram,
@@ -341,7 +342,7 @@ static int test_noreserved(struct unit_test_state *uts, const phys_addr_t ram,
 	return 0;
 }
 
-static int lib_test_lmb_noreserved_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_noreserved_norun(struct unit_test_state *uts)
 {
 	int ret;
 
@@ -353,9 +354,9 @@ static int lib_test_lmb_noreserved_norun(struct unit_test_state *uts)
 	/* simulate 512 MiB RAM beginning at 1.5GiB */
 	return test_noreserved(uts, 0xE0000000, 4, 1);
 }
-LIB_TEST(lib_test_lmb_noreserved_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_noreserved_norun, UT_TESTF_MANUAL);
 
-static int lib_test_lmb_unaligned_size_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_unaligned_size_norun(struct unit_test_state *uts)
 {
 	int ret;
 
@@ -367,13 +368,13 @@ static int lib_test_lmb_unaligned_size_norun(struct unit_test_state *uts)
 	/* simulate 512 MiB RAM beginning at 1.5GiB */
 	return test_noreserved(uts, 0xE0000000, 5, 8);
 }
-LIB_TEST(lib_test_lmb_unaligned_size_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_unaligned_size_norun, UT_TESTF_MANUAL);
 
 /*
  * Simulate a RAM that starts at 0 and allocate down to address 0, which must
  * fail as '0' means failure for the lmb_alloc functions.
  */
-static int lib_test_lmb_at_0_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_at_0_norun(struct unit_test_state *uts)
 {
 	const phys_addr_t ram = 0;
 	const phys_size_t ram_size = 0x20000000;
@@ -407,10 +408,10 @@ static int lib_test_lmb_at_0_norun(struct unit_test_state *uts)
 
 	return 0;
 }
-LIB_TEST(lib_test_lmb_at_0_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_at_0_norun, UT_TESTF_MANUAL);
 
 /* Check that calling lmb_reserve with overlapping regions fails. */
-static int lib_test_lmb_overlapping_reserve_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_overlapping_reserve_norun(struct unit_test_state *uts)
 {
 	const phys_addr_t ram = 0x40000000;
 	const phys_size_t ram_size = 0x20000000;
@@ -452,7 +453,7 @@ static int lib_test_lmb_overlapping_reserve_norun(struct unit_test_state *uts)
 		   0, 0, 0, 0);
 	return 0;
 }
-LIB_TEST(lib_test_lmb_overlapping_reserve_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_overlapping_reserve_norun, UT_TESTF_MANUAL);
 
 /*
  * Simulate 512 MiB RAM, reserve 3 blocks, allocate addresses in between.
@@ -566,7 +567,7 @@ static int test_alloc_addr(struct unit_test_state *uts, const phys_addr_t ram)
 	return 0;
 }
 
-static int lib_test_lmb_alloc_addr_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_alloc_addr_norun(struct unit_test_state *uts)
 {
 	int ret;
 
@@ -578,7 +579,7 @@ static int lib_test_lmb_alloc_addr_norun(struct unit_test_state *uts)
 	/* simulate 512 MiB RAM beginning at 1.5GiB */
 	return test_alloc_addr(uts, 0xE0000000);
 }
-LIB_TEST(lib_test_lmb_alloc_addr_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_alloc_addr_norun, UT_TESTF_MANUAL);
 
 /* Simulate 512 MiB RAM, reserve 3 blocks, check addresses in between */
 static int test_get_unreserved_size(struct unit_test_state *uts,
@@ -633,7 +634,7 @@ static int test_get_unreserved_size(struct unit_test_state *uts,
 	return 0;
 }
 
-static int lib_test_lmb_get_free_size_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_get_free_size_norun(struct unit_test_state *uts)
 {
 	int ret;
 
@@ -645,9 +646,9 @@ static int lib_test_lmb_get_free_size_norun(struct unit_test_state *uts)
 	/* simulate 512 MiB RAM beginning at 1.5GiB */
 	return test_get_unreserved_size(uts, 0xE0000000);
 }
-LIB_TEST(lib_test_lmb_get_free_size_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_get_free_size_norun, UT_TESTF_MANUAL);
 
-static int lib_test_lmb_flags_norun(struct unit_test_state *uts)
+static int lmb_test_lmb_flags_norun(struct unit_test_state *uts)
 {
 	const phys_addr_t ram = 0x40000000;
 	const phys_size_t ram_size = 0x20000000;
@@ -729,4 +730,12 @@ static int lib_test_lmb_flags_norun(struct unit_test_state *uts)
 
 	return 0;
 }
-LIB_TEST(lib_test_lmb_flags_norun, UT_TESTF_MANUAL);
+LMB_TEST(lmb_test_lmb_flags_norun, UT_TESTF_MANUAL);
+
+int do_ut_lmb(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	struct unit_test *tests = UNIT_TEST_SUITE_START(lmb_test);
+	const int n_ents = UNIT_TEST_SUITE_COUNT(lmb_test);
+
+	return cmd_ut_category("lmb", "lmb_test_", tests, n_ents, argc, argv);
+}
