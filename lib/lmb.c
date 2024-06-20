@@ -724,7 +724,6 @@ __weak void arch_lmb_reserve(void)
 	arch_lmb_reserve_generic(rsv_start, gd->ram_top, 16384);
 }
 
-#if 0
 /**
  * lmb_mem_regions_init() - Initialise the LMB memory
  *
@@ -738,22 +737,6 @@ __weak void arch_lmb_reserve(void)
  */
 int lmb_mem_regions_init(void)
 {
-	bool ret;
-
-	ret = alist_init(&lmb_free_mem, sizeof(struct lmb_region),
-			 (uint)LMB_ALIST_INITIAL_SIZE);
-	if (!ret) {
-		log_debug("Unable to initialise the list for LMB free memory\n");
-		return -1;
-	}
-
-	ret = alist_init(&lmb_used_mem, sizeof(struct lmb_region),
-			 (uint)LMB_ALIST_INITIAL_SIZE);
-	if (!ret) {
-		log_debug("Unable to initialise the list for LMB used memory\n");
-		return -1;
-	}
-
 	lmb_add_memory();
 
 	/* Reserve the U-Boot image region once U-Boot has relocated */
@@ -764,4 +747,23 @@ int lmb_mem_regions_init(void)
 
 	return 0;
 }
-#endif
+
+/**
+ * initr_lmb() - Initialise the LMB lists
+ *
+ * Initialise the LMB lists needed for keeping the memory map. There
+ * are two lists, in form of alloced list data structure. One for the
+ * available memory, and one for the used memory.
+ *
+ * Return: 0 on success, -ve on error
+ */
+int initr_lmb(void)
+{
+	int ret;
+
+	ret = lmb_mem_regions_init();
+	if (ret)
+		printf("Unable to initialise the LMB data structures\n");
+
+	return ret;
+}
