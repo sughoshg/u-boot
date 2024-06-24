@@ -534,6 +534,11 @@ long lmb_free(phys_addr_t base, phys_size_t size)
 	return 0;
 }
 
+long lmb_free_nooverwrite(phys_addr_t base, phys_size_t size)
+{
+	return __lmb_free(base, size);
+}
+
 long lmb_reserve_flags(phys_addr_t base, phys_size_t size, enum lmb_flags flags)
 {
 	long ret = 0;
@@ -627,11 +632,31 @@ phys_addr_t lmb_alloc(phys_size_t size, ulong align)
 	return lmb_alloc_base(size, align, LMB_ALLOC_ANYWHERE);
 }
 
+phys_addr_t lmb_alloc_nooverwrite(phys_size_t size, ulong align)
+{
+	return __lmb_alloc_base(size, align, LMB_ALLOC_ANYWHERE,
+				LMB_NOOVERWRITE);
+}
+
 phys_addr_t lmb_alloc_base(phys_size_t size, ulong align, phys_addr_t max_addr)
 {
 	phys_addr_t alloc;
 
 	alloc = __lmb_alloc_base(size, align, max_addr, LMB_NONE);
+
+	if (alloc == 0)
+		printf("ERROR: Failed to allocate 0x%lx bytes below 0x%lx.\n",
+		       (ulong)size, (ulong)max_addr);
+
+	return alloc;
+}
+
+phys_addr_t lmb_alloc_base_nooverwrite(phys_size_t size, ulong align,
+				       phys_addr_t max_addr)
+{
+	phys_addr_t alloc;
+
+	alloc = __lmb_alloc_base(size, align, max_addr, LMB_NOOVERWRITE);
 
 	if (alloc == 0)
 		printf("ERROR: Failed to allocate 0x%lx bytes below 0x%lx.\n",
@@ -671,6 +696,11 @@ static phys_addr_t __lmb_alloc_addr(phys_addr_t base, phys_size_t size,
 phys_addr_t lmb_alloc_addr(phys_addr_t base, phys_size_t size)
 {
 	return __lmb_alloc_addr(base, size, LMB_NONE);
+}
+
+phys_addr_t lmb_alloc_addr_nooverwrite(phys_addr_t base, phys_size_t size)
+{
+	return __lmb_alloc_addr(base, size, LMB_NOOVERWRITE);
 }
 
 /* Return number of bytes from a given address that are free */

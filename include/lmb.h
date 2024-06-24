@@ -72,8 +72,12 @@ long lmb_reserve(phys_addr_t base, phys_size_t size);
 long lmb_reserve_flags(phys_addr_t base, phys_size_t size,
 		       enum lmb_flags flags);
 phys_addr_t lmb_alloc(phys_size_t size, ulong align);
+phys_addr_t lmb_alloc_nooverwrite(phys_size_t size, ulong align);
 phys_addr_t lmb_alloc_base(phys_size_t size, ulong align, phys_addr_t max_addr);
+phys_addr_t lmb_alloc_base_nooverwrite(phys_size_t size, ulong align,
+				       phys_addr_t max_addr);
 phys_addr_t lmb_alloc_addr(phys_addr_t base, phys_size_t size);
+phys_addr_t lmb_alloc_addr_nooverwrite(phys_addr_t base, phys_size_t size);
 phys_size_t lmb_get_free_size(phys_addr_t addr);
 
 /**
@@ -89,6 +93,7 @@ phys_size_t lmb_get_free_size(phys_addr_t addr);
 int lmb_is_reserved_flags(phys_addr_t addr, int flags);
 
 long lmb_free(phys_addr_t base, phys_size_t size);
+long lmb_free_nooverwrite(phys_addr_t base, phys_size_t size);
 
 void lmb_dump_all(void);
 void lmb_dump_all_force(void);
