@@ -941,7 +941,8 @@ int efi_memory_init(void)
 {
 	efi_add_known_memory();
 
-	add_u_boot_and_runtime();
+	if (!CONFIG_IS_ENABLED(SANDBOX))
+		add_u_boot_and_runtime();
 
 #ifdef CONFIG_EFI_LOADER_BOUNCE_BUFFER
 	/* Request a 32bit 64MB bounce buffer region */
