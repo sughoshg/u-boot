@@ -661,6 +661,47 @@ int embedded_dtb_select(void)
 }
 #endif
 
+#ifndef MMU_SECTION_SIZE
+#define MMU_SECTION_SIZE        (1 * 1024 * 1024)
+#endif
+
+static int board_get_reserved_memory(fdt_addr_t *start, fdt_size_t *size)
+{
+	fdt_addr_t fdt_mem_size;
+	fdt_addr_t fdt_start;
+	ofnode node;
+
+	node = ofnode_path("/reserved-memory/pmu");
+	if (!ofnode_valid(node))
+		return -ENOENT;
+
+	fdt_start = ofnode_get_addr_size(node, "reg", &fdt_mem_size);
+	*start = fdt_start;
+	*size = fdt_mem_size;
+	return fdt_start != FDT_ADDR_T_NONE ? 0 : -1;
+}
+
+phys_addr_t board_get_usable_ram_top(phys_size_t total_size)
+{
+	int ret;
+	fdt_size_t size, rsv_size;
+	fdt_addr_t reg, rsv_start;
+
+	if (!total_size)
+		return gd->ram_top;
+
+	if (!IS_ALIGNED((ulong)gd->fdt_blob, 0x8))
+		panic("Not 64bit aligned DT location: %p\n", gd->fdt_blob);
+
+	/* found enough not-reserved memory to relocated U-Boot */
+	size = ALIGN(CONFIG_SYS_MALLOC_LEN + total_size, MMU_SECTION_SIZE);
+
+	ret = board_get_reserved_memory(&rsv_start, &rsv_size);
+	reg = (!ret ? rsv_start : gd->ram_top) - size;
+
+	return reg + size;
+}
+
 #ifdef CONFIG_OF_BOARD_SETUP
 #define MAX_RAND_SIZE 8
 int ft_board_setup(void *blob, struct bd_info *bd)
