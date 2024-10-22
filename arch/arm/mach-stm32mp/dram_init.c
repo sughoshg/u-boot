@@ -18,6 +18,9 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+extern phys_addr_t get_mem_top(phys_addr_t ram_start, phys_size_t ram_size,
+			       phys_size_t size, void *fdt);
+
 int optee_get_reserved_memory(u32 *start, u32 *size)
 {
 	fdt_addr_t fdt_mem_size;
@@ -67,7 +70,7 @@ phys_addr_t board_get_usable_ram_top(phys_size_t total_size)
 {
 	phys_size_t size;
 	phys_addr_t reg;
-	u32 optee_start, optee_size;
+//	u32 optee_start, optee_size;
 
 	if (!total_size)
 		return gd->ram_top;
@@ -83,11 +86,18 @@ phys_addr_t board_get_usable_ram_top(phys_size_t total_size)
 
 	reg = gd->ram_top - size;
 
+#if 0
 	/* Reserved memory for OP-TEE at END of DDR for STM32MP1 SoC */
 	if (IS_ENABLED(CONFIG_STM32MP13X) || IS_ENABLED(CONFIG_STM32MP15X)) {
 		if (!optee_get_reserved_memory(&optee_start, &optee_size))
 			reg = ALIGN(optee_start - size, MMU_SECTION_SIZE);
 	}
+#endif
+	reg = get_mem_top(gd->ram_base, gd->ram_size, size,
+			  (void *)gd->fdt_blob);
+
+	if (!reg)
+		reg = gd->ram_top - size;
 
 	/* before relocation, mark the U-Boot memory as cacheable by default */
 	if (!(gd->flags & GD_FLG_RELOC))
